@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+    <base href="$FLUTTER_BASE_HREF" />
+
+    <meta charset="UTF-8" />
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+    <meta name="description" content="B-ON-B - Board on Bus" />
+
+    <!-- Mobile viewport settings for iOS Safari -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+
+    <!-- iOS meta tags & icons -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="B-ON-B" />
+    <link rel="apple-touch-icon" href="icons/Icon-192.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    <style>
+      /* Prevent flash of unstyled content */
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* Loading indicator */
+      .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+        background-color: #f5f5f5;
+      }
+
+      /* Hide loading after Flutter loads */
+      .flutter-loaded .loading {
+        display: none;
+      }
+    </style>
+
+    <title>B-ON-B - Board on Bus</title>
+    <link rel="manifest" href="manifest.json" />
+
+    <script>
+      // The value below is injected by flutter build, do not touch.
+      const serviceWorkerVersion = null;
+    </script>
+    <!-- This script adds the flutter initialization JS code -->
+    <script src="flutter.js" defer></script>
+  </head>
+  <body>
+    <div class="loading">
+      <div>Loading...</div>
+    </div>
+    <script>
+      // Error handling for iOS Safari
+      window.addEventListener("error", function (event) {
+        console.error("JavaScript error:", event.error);
+      });
+
+      window.addEventListener("unhandledrejection", function (event) {
+        console.error("Unhandled promise rejection:", event.reason);
+      });
+
+      window.addEventListener("load", function (ev) {
+        try {
+          // Check if Flutter loader is available
+          if (typeof _flutter === "undefined" || !_flutter.loader) {
+            console.error("Flutter loader not found");
+            document.querySelector(".loading").innerHTML =
+              "<div>Error: Flutter loader not found. Please refresh the page.</div>";
+            return;
+          }
+
+          // Download main.dart.js
+          _flutter.loader.loadEntrypoint({
+            serviceWorker: {
+              serviceWorkerVersion: serviceWorkerVersion,
+            },
+            onEntrypointLoaded: function (engineInitializer) {
+              engineInitializer
+                .initializeEngine({
+                  renderer: "auto",
+                })
+                .then(function (appRunner) {
+                  appRunner.runApp();
+                  // Hide loading indicator after app starts
+                  document.body.classList.add("flutter-loaded");
+                })
+                .catch(function (error) {
+                  console.error("Flutter engine initialization error:", error);
+                  document.querySelector(".loading").innerHTML =
+                    "<div>Error loading app. Please refresh the page.</div>";
+                });
+            },
+          });
+        } catch (error) {
+          console.error("Flutter app initialization error:", error);
+          document.querySelector(".loading").innerHTML =
+            "<div>Error: " + error.message + ". Please refresh the page.</div>";
+        }
+      });
+    </script>
+  </body>
+</html>
