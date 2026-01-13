@@ -490,6 +490,9 @@ class _AgenciesScreenState extends State<AgenciesScreen> {
       'logo': agency.logo,
       'description': agency.description ?? '',
       'rating': agency.rating,
+      'reviews': 0, // Will be updated when agency details screen loads reviews
+      'routes': 0, // Default value if not available
+      'priceRange': 'Contact for pricing', // Default value if not available
       'amenities': agency.amenities,
     };
   }

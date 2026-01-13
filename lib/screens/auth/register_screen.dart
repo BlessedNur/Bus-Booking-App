@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -59,12 +60,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       try {
         final apiService = ApiService();
+        // Clean phone number: remove spaces, hyphens, and any country code if entered
+        String phoneNumber = _phoneController.text.trim().replaceAll(RegExp(r'[\s\-]'), '');
+        final countryCodeDigits = _selectedCountryCode.dialCode?.replaceAll('+', '') ?? '';
+        // Remove country code if user entered it
+        if (countryCodeDigits.isNotEmpty && phoneNumber.startsWith(countryCodeDigits)) {
+          phoneNumber = phoneNumber.substring(countryCodeDigits.length);
+        }
+        
         await apiService.register(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
+          phone: phoneNumber,
           password: _passwordController.text,
-          countryCode: _selectedCountryCode.dialCode,
+          countryCode: _selectedCountryCode.dialCode ?? '+237',
         );
 
         if (mounted) {
@@ -295,11 +304,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               keyboardType: TextInputType.phone,
                               enableSuggestions: false,
                               autocorrect: false,
+                              inputFormatters: [
+                                // Prevent entering country code characters
+                                FilteringTextInputFormatter.deny(RegExp(r'^\+')),
+                                // Only allow digits, spaces, and hyphens
+                                FilteringTextInputFormatter.allow(RegExp(r'[0-9\s\-]')),
+                              ],
                               decoration: InputDecoration(
                                 labelText: 'Phone Number',
+                                hintText: 'Enter number without country code',
                                 labelStyle: quicksand(
                                   fontSize: 13,
                                   color: Colors.grey.shade600,
+                                ),
+                                hintStyle: quicksand(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade400,
                                 ),
                                 prefixIcon: PhosphorIcon(
                                   PhosphorIcons.phone(),
@@ -337,8 +357,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your phone number';
                                 }
-                                if (value.length < 10) {
+                                // Remove spaces and hyphens for validation
+                                final cleanNumber = value.replaceAll(RegExp(r'[\s\-]'), '');
+                                // Check if user tried to enter country code
+                                final countryCodeDigits = _selectedCountryCode.dialCode?.replaceAll('+', '') ?? '';
+                                if (countryCodeDigits.isNotEmpty && cleanNumber.startsWith(countryCodeDigits)) {
+                                  return 'Country code already selected. Enter only your number';
+                                }
+                                // Check minimum length (at least 7 digits for most countries)
+                                if (cleanNumber.length < 7) {
                                   return 'Please enter a valid phone number';
+                                }
+                                // Check maximum length (reasonable limit)
+                                if (cleanNumber.length > 15) {
+                                  return 'Phone number is too long';
                                 }
                                 return null;
                               },

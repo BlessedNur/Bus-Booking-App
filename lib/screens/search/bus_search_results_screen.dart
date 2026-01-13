@@ -39,7 +39,13 @@ class _BusSearchResultsScreenState extends State<BusSearchResultsScreen> {
     super.initState();
     _fromLocation = widget.fromLocation;
     _toLocation = widget.toLocation;
-    _selectedDate = widget.selectedDate;
+    // Use current date if no date provided or if date is old
+    if (widget.selectedDate.isEmpty || widget.selectedDate.contains('2024')) {
+      final today = DateTime.now();
+      _selectedDate = '${_getMonthName(today.month)} ${today.day}, ${today.year}';
+    } else {
+      _selectedDate = widget.selectedDate;
+    }
     _getUserLocation();
     _searchBuses();
   }
@@ -243,6 +249,34 @@ class _BusSearchResultsScreenState extends State<BusSearchResultsScreen> {
               children: [
                 Column(
                   children: [
+                    // Yellow box with user location at top
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade600,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          PhosphorIcon(
+                            PhosphorIcons.mapPin(),
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            _userLocation ?? 'Loading...',
+                            style: quicksand(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     // Logo (white/inverted) at the top
                     ColorFiltered(
                       colorFilter: const ColorFilter.mode(
@@ -326,37 +360,6 @@ class _BusSearchResultsScreenState extends State<BusSearchResultsScreen> {
                       ),
                     ),
                   ],
-                ),
-                // Yellow box with user location at bottom left
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade600,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        PhosphorIcon(
-                          PhosphorIcons.mapPin(),
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          _userLocation ?? 'Loading...',
-                          style: quicksand(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),

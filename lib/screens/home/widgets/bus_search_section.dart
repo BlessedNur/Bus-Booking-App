@@ -197,6 +197,9 @@ class _BusSearchSectionState extends State<BusSearchSection> {
     return ClipRRect(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        decoration: const BoxDecoration(
+          color: Colors.white, // White background for header
+        ),
         child: Row(
           children: [
             // Logo on the left
@@ -297,24 +300,7 @@ class _BusSearchSectionState extends State<BusSearchSection> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: Stack(
-        children: [
-          // Orange background that scrolls with content
-          Transform.translate(
-            offset: const Offset(0, -300), // Offset upward to extend behind header area
-            child: Container(
-              height: 550, // Height to cover header and search area
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFFFF), // Orange background
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(40),
-                  bottomRight: Radius.circular(40),
-                ),
-              ),
-            ),
-          ),
-          // Content column
-          Column(
+      child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header that scrolls with content
@@ -790,147 +776,163 @@ class _BusSearchSectionState extends State<BusSearchSection> {
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 160,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _agencies.length,
-                    itemBuilder: (context, index) {
-                      final agency = _agencies[index];
-                      // Calculate width for mobile - wider cards
-                      // Make cards wider: 2 cards + peek, but with larger width
-                      final screenWidth = MediaQuery.of(context).size.width;
-                      final cardWidth = (screenWidth - 48 - 16) / 1.8; // Wider cards for mobile - was 2.2
-                      
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                          child: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AgencyDetailsScreen(
-                                  agency: {
-                                    'id': agency.id,
-                                    'name': agency.name,
-                                    'logo': agency.logo,
-                                    'description': agency.description ?? '',
-                                    'rating': agency.rating,
-                                    'amenities': agency.amenities,
-                                  },
-                                ),
-                              ),
+                  child: _isLoadingAgencies
+                      ? ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: 3, // Show 3 skeleton loaders
+                          itemBuilder: (context, index) {
+                            final screenWidth = MediaQuery.of(context).size.width;
+                            final cardWidth = (screenWidth - 48 - 16) / 1.8;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: _buildAgencySkeleton(cardWidth),
                             );
                           },
-                          child: Container(
-                            width: cardWidth,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12), // Slightly larger radius
-                              border: Border.all(
-                                color: Colors.grey.shade200,
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.06),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Stack(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      // Agency name
-                                      Text(
-                                        agency.name,
-                                        style: quicksand(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                        )
+                      : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _agencies.length,
+                          itemBuilder: (context, index) {
+                            final agency = _agencies[index];
+                            // Calculate width for mobile - wider cards
+                            // Make cards wider: 2 cards + peek, but with larger width
+                            final screenWidth = MediaQuery.of(context).size.width;
+                            final cardWidth = (screenWidth - 48 - 16) / 1.8; // Wider cards for mobile - was 2.2
+                            
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                                child: GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AgencyDetailsScreen(
+                                        agency: {
+                                          'id': agency.id,
+                                          'name': agency.name,
+                                          'logo': agency.logo,
+                                          'description': agency.description ?? '',
+                                          'rating': agency.rating,
+                                          'reviews': 0, // Default value if not available
+                                          'routes': 0, // Default value if not available
+                                          'priceRange': 'Contact for pricing', // Default value if not available
+                                          'amenities': agency.amenities,
+                                        },
                                       ),
-                                      const Spacer(),
-                                      // Bottom section with rating and departures
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          // Rating
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.star,
-                                                size: 14,
-                                                color: Colors.amber,
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  width: cardWidth,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12), // Slightly larger radius
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                      width: 1.5,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.06),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.all(14),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // Agency name
+                                            Text(
+                                              agency.name,
+                                              style: quicksand(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black87,
                                               ),
-                                              const SizedBox(width: 3),
-                                              Text(
-                                                agency.rating.toStringAsFixed(1),
-                                                style: quicksand(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.black87,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const Spacer(),
+                                            // Bottom section with rating and departures
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                // Rating
+                                                Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.star,
+                                                      size: 14,
+                                                      color: Colors.amber,
+                                                    ),
+                                                    const SizedBox(width: 3),
+                                                    Text(
+                                                      agency.rating.toStringAsFixed(1),
+                                                      style: quicksand(
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: Colors.black87,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 5),
-                                          // Description or routes
-                                          Text(
-                                            agency.description ?? 'Multiple Routes',
-                                            style: quicksand(
-                                              fontSize: 11,
-                                              color: Colors.grey.shade600,
+                                                const SizedBox(height: 5),
+                                                // Description or routes
+                                                Text(
+                                                  agency.description ?? 'Multiple Routes',
+                                                  style: quicksand(
+                                                    fontSize: 11,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                // Amenities count
+                                                Text(
+                                                  '${agency.amenities.length} amenities',
+                                                  style: quicksand(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: const Color(0xFFFF9500),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
+                                          ],
+                                        ),
+                                      ),
+                                      // App logo at bottom right
+                                      Positioned(
+                                        bottom: -40,
+                                        right: -40,
+                                        child: Opacity(
+                                          opacity: 0.25,
+                                          child: Image.asset(
+                                            'assets/images/BONBLOGO.png',
+                                            height: 120,
+                                            width: 120,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return const SizedBox.shrink();
+                                            },
                                           ),
-                                          const SizedBox(height: 4),
-                                          // Amenities count
-                                          Text(
-                                            '${agency.amenities.length} amenities',
-                                            style: quicksand(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: const Color(0xFFFF9500),
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                // App logo at bottom right
-                                Positioned(
-                                  bottom: -40,
-                                  right: -40,
-                                  child: Opacity(
-                                    opacity: 0.25,
-                                    child: Image.asset(
-                                      'assets/images/BONBLOGO.png',
-                                      height: 120,
-                                      width: 120,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return const SizedBox.shrink();
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
                 const SizedBox(height: 24), // Bottom padding
               ],
@@ -938,11 +940,118 @@ class _BusSearchSectionState extends State<BusSearchSection> {
           ), // Closes Container (grey background) (line 494)
         ], // Closes Column children (content column)
       ), // Closes Column (content column)
-        ], // Closes Stack children
-      ), // Closes Stack
     ); // Closes SingleChildScrollView and ends return
   }
 
+  Widget _buildAgencySkeleton(double width) {
+    return _SkeletonLoader(
+      child: Container(
+            width: width,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.grey.shade200,
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Agency name skeleton
+                  Container(
+                    height: 16,
+                    width: width * 0.6,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 14,
+                    width: width * 0.4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const Spacer(),
+                  // Bottom section skeleton
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Rating skeleton
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            height: 12,
+                            width: 30,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Description skeleton
+                      Container(
+                        height: 10,
+                        width: width * 0.7,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        height: 10,
+                        width: width * 0.5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      // Amenities skeleton
+                      Container(
+                        height: 10,
+                        width: width * 0.4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
 
   Widget _buildLocationField(String label, String value, VoidCallback onTap) {
     return GestureDetector(
@@ -1411,4 +1520,50 @@ class DashedLinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+// Skeleton loader widget with shimmer effect
+class _SkeletonLoader extends StatefulWidget {
+  final Widget child;
+  const _SkeletonLoader({required this.child});
+
+  @override
+  State<_SkeletonLoader> createState() => _SkeletonLoaderState();
+}
+
+class _SkeletonLoaderState extends State<_SkeletonLoader>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.4, end: 0.8).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _animation.value,
+          child: widget.child,
+        );
+      },
+    );
+  }
 }

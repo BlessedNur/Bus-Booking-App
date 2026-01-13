@@ -189,13 +189,19 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   child: ElevatedButton.icon(
                     onPressed: () {
                       // Navigate to bus search results screen
+                      final today = DateTime.now();
+                      final months = [
+                        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                      ];
+                      final dateString = '${months[today.month - 1]} ${today.day}, ${today.year}';
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => BusSearchResultsScreen(
                             fromLocation: 'Yaoundé',
                             toLocation: 'Douala',
-                            selectedDate: 'Mar 15, 2024',
+                            selectedDate: dateString,
                           ),
                         ),
                       );

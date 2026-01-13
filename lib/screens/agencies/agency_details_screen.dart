@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../utils/font_helper.dart';
+import '../../services/api_service.dart';
 import '../search/bus_search_results_screen.dart';
 
 class AgencyDetailsScreen extends StatefulWidget {
@@ -14,50 +15,72 @@ class AgencyDetailsScreen extends StatefulWidget {
 
 class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
   int _selectedTab = 0; // 0: Overview, 1: Reviews
+  List<Map<String, dynamic>> _reviews = [];
+  bool _isLoadingReviews = true;
+  bool _canUserReview = false;
+  bool _isCheckingCanReview = true;
+  int _actualReviewCount = 0;
 
-  // Sample reviews data
-  final List<Map<String, dynamic>> _reviews = [
-    {
-      'id': '1',
-      'userName': 'Marie N.',
-      'rating': 5,
-      'date': '2 days ago',
-      'comment': 'Excellent service! Very comfortable buses and punctual. Highly recommend.',
-      'route': 'Yaoundé → Douala',
-    },
-    {
-      'id': '2',
-      'userName': 'Jean P.',
-      'rating': 4,
-      'date': '1 week ago',
-      'comment': 'Good experience overall. Buses are clean and staff is friendly.',
-      'route': 'Douala → Bafoussam',
-    },
-    {
-      'id': '3',
-      'userName': 'Sarah T.',
-      'rating': 5,
-      'date': '2 weeks ago',
-      'comment': 'Best bus service in Cameroon! Wi-Fi works well and seats are very comfortable.',
-      'route': 'Yaoundé → Garoua',
-    },
-    {
-      'id': '4',
-      'userName': 'Paul K.',
-      'rating': 4,
-      'date': '3 weeks ago',
-      'comment': 'Reliable and affordable. Would book again.',
-      'route': 'Douala → Maroua',
-    },
-    {
-      'id': '5',
-      'userName': 'Amina D.',
-      'rating': 3,
-      'date': '1 month ago',
-      'comment': 'Decent service but could improve on punctuality.',
-      'route': 'Yaoundé → Ngaoundéré',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadReviews();
+    _checkCanReview();
+  }
+
+  Future<void> _loadReviews() async {
+    setState(() {
+      _isLoadingReviews = true;
+    });
+
+    try {
+      final apiService = ApiService();
+      final agencyId = widget.agency['id'] as String;
+      final reviews = await apiService.getAgencyReviews(agencyId);
+      
+      if (mounted) {
+        setState(() {
+          _reviews = reviews;
+          _actualReviewCount = reviews.length;
+          _isLoadingReviews = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _reviews = [];
+          _actualReviewCount = 0;
+          _isLoadingReviews = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _checkCanReview() async {
+    setState(() {
+      _isCheckingCanReview = true;
+    });
+
+    try {
+      final apiService = ApiService();
+      final agencyId = widget.agency['id'] as String;
+      final canReview = await apiService.canUserReviewAgency(agencyId);
+      
+      if (mounted) {
+        setState(() {
+          _canUserReview = canReview;
+          _isCheckingCanReview = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _canUserReview = false;
+          _isCheckingCanReview = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +198,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              widget.agency['rating'].toString(),
+                              (widget.agency['rating'] ?? 0).toString(),
                               style: quicksand(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -184,7 +207,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '(${widget.agency['reviews']} reviews)',
+                              '($_actualReviewCount reviews)',
                               style: quicksand(
                                 fontSize: 14,
                                 color: Colors.grey.shade600,
@@ -252,12 +275,16 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BusSearchResultsScreen(
-                      fromLocation: 'Yaoundé',
-                      toLocation: 'Douala',
-                      selectedDate: 'Mar 15, 2024',
-                      agencyFilter: widget.agency['name'] as String,
-                    ),
+                    builder: (context) {
+                      final today = DateTime.now();
+                      final dateString = '${_getMonthName(today.month)} ${today.day}, ${today.year}';
+                      return BusSearchResultsScreen(
+                        fromLocation: 'Yaoundé',
+                        toLocation: 'Douala',
+                        selectedDate: dateString,
+                        agencyFilter: widget.agency['name'] as String,
+                      );
+                    },
                   ),
                 );
               },
@@ -341,7 +368,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                widget.agency['description'] as String,
+                widget.agency['description'] as String? ?? 'No description available',
                 style: quicksand(
                   fontSize: 14,
                   color: Colors.grey.shade700,
@@ -432,7 +459,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
               Expanded(
                 child: _buildStatItem(
                   'Routes',
-                  widget.agency['routes'].toString(),
+                  (widget.agency['routes'] ?? 0).toString(),
                   PhosphorIcons.mapPin(),
                 ),
               ),
@@ -440,7 +467,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
               Expanded(
                 child: _buildStatItem(
                   'Rating',
-                  widget.agency['rating'].toString(),
+                  (widget.agency['rating'] ?? 0).toString(),
                   PhosphorIcons.star(),
                 ),
               ),
@@ -448,7 +475,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
               Expanded(
                 child: _buildStatItem(
                   'Reviews',
-                  widget.agency['reviews'].toString(),
+                  _actualReviewCount.toString(),
                   PhosphorIcons.chatCircle(),
                 ),
               ),
@@ -481,7 +508,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
-                children: (widget.agency['amenities'] as List<String>).map((amenity) {
+                children: ((widget.agency['amenities'] as List<dynamic>?) ?? <String>[]).map((amenity) {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
@@ -584,7 +611,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
               Column(
                 children: [
                   Text(
-                    widget.agency['rating'].toString(),
+                    (widget.agency['rating'] ?? 0).toString(),
                     style: quicksand(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
@@ -593,8 +620,9 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                   ),
                   Row(
                     children: List.generate(5, (index) {
+                      final rating = (widget.agency['rating'] ?? 0) as num;
                       return Icon(
-                        index < widget.agency['rating'].round()
+                        index < rating.round()
                             ? Icons.star
                             : Icons.star_border,
                         size: 20,
@@ -604,7 +632,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${widget.agency['reviews']} reviews',
+                    '$_actualReviewCount reviews',
                     style: quicksand(
                       fontSize: 14,
                       color: Colors.grey.shade600,
@@ -638,8 +666,113 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
 
         const SizedBox(height: 16),
 
+        // Write Review Button (only if user can review)
+        if (!_isCheckingCanReview && _canUserReview)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: ElevatedButton.icon(
+              onPressed: () => _showReviewDialog(),
+              icon: PhosphorIcon(
+                PhosphorIcons.pencil(),
+                size: 20,
+                color: Colors.white,
+              ),
+              label: Text(
+                'Write a Review',
+                style: quicksand(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF9500),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
+
+        if (!_isCheckingCanReview && !_canUserReview)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              children: [
+                PhosphorIcon(
+                  PhosphorIcons.info(),
+                  size: 20,
+                  color: Colors.orange.shade700,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'You can only review agencies you have booked with.',
+                    style: quicksand(
+                      fontSize: 13,
+                      color: Colors.orange.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        const SizedBox(height: 16),
+
         // Reviews List
-        ..._reviews.map((review) => Container(
+        _isLoadingReviews
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(
+                    color: Color(0xFFFF9500),
+                  ),
+                ),
+              )
+            : _reviews.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        children: [
+                          PhosphorIcon(
+                            PhosphorIcons.chatCircle(),
+                            size: 64,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No reviews yet',
+                            style: quicksand(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Be the first to review this agency!',
+                            style: quicksand(
+                              fontSize: 14,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Expanded(
+                    child: ListView(
+                      children: _reviews.map((review) => Container(
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -662,7 +795,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            (review['userName'] as String)[0],
+                            ((review['user']?['name'] ?? review['userName'] ?? 'U') as String)[0].toUpperCase(),
                             style: quicksand(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -677,7 +810,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              review['userName'] as String,
+                              review['user']?['name'] ?? review['userName'] ?? 'Anonymous',
                               style: quicksand(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
@@ -688,8 +821,9 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                             Row(
                               children: [
                                 ...List.generate(5, (index) {
+                                  final rating = (review['rating'] ?? 0) as int;
                                   return Icon(
-                                    index < review['rating']
+                                    index < rating
                                         ? Icons.star
                                         : Icons.star_border,
                                     size: 14,
@@ -698,7 +832,7 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                                 }),
                                 const SizedBox(width: 8),
                                 Text(
-                                  review['date'] as String,
+                                  _formatReviewDate(review['createdAt'] ?? review['date']),
                                   style: quicksand(
                                     fontSize: 12,
                                     color: Colors.grey.shade600,
@@ -711,25 +845,27 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      review['route'] as String,
-                      style: quicksand(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
+                  if (review['route'] != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        review['route'] as String,
+                        style: quicksand(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 12),
                   Text(
-                    review['comment'] as String,
+                    review['comment'] ?? review['text'] ?? '',
                     style: quicksand(
                       fontSize: 14,
                       color: Colors.grey.shade700,
@@ -738,7 +874,9 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
                   ),
                 ],
               ),
-            )),
+            )).toList(),
+                    ),
+                  ),
       ],
     );
   }
@@ -850,6 +988,44 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
     );
   }
 
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
+  }
+
+  String _formatReviewDate(dynamic date) {
+    if (date == null) return 'Recently';
+    
+    if (date is String) {
+      try {
+        final parsedDate = DateTime.parse(date);
+      final now = DateTime.now();
+      final difference = now.difference(parsedDate);
+      
+      if (difference.inDays == 0) {
+        return 'Today';
+      } else if (difference.inDays == 1) {
+        return 'Yesterday';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} days ago';
+      } else if (difference.inDays < 30) {
+        return '${(difference.inDays / 7).floor()} weeks ago';
+      } else if (difference.inDays < 365) {
+        return '${(difference.inDays / 30).floor()} months ago';
+      } else {
+        return '${(difference.inDays / 365).floor()} years ago';
+      }
+      } catch (e) {
+        return date.toString();
+      }
+    }
+    
+    return date.toString();
+  }
+
   IconData _getAmenityIcon(String amenity) {
     switch (amenity.toLowerCase()) {
       case 'wi-fi':
@@ -867,5 +1043,197 @@ class _AgencyDetailsScreenState extends State<AgencyDetailsScreen> {
       default:
         return PhosphorIcons.check();
     }
+  }
+
+  void _showReviewDialog() {
+    int selectedRating = 5;
+    final TextEditingController commentController = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            'Write a Review',
+            style: quicksand(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Rating',
+                  style: quicksand(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    return GestureDetector(
+                      onTap: () {
+                        setDialogState(() {
+                          selectedRating = index + 1;
+                        });
+                      },
+                      child: Icon(
+                        index < selectedRating ? Icons.star : Icons.star_border,
+                        size: 40,
+                        color: Colors.amber,
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Comment',
+                  style: quicksand(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: commentController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'Share your experience...',
+                    hintStyle: quicksand(
+                      fontSize: 14,
+                      color: Colors.grey.shade400,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFFF9500), width: 2),
+                    ),
+                  ),
+                  style: quicksand(
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: quicksand(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                    if (commentController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Please enter a comment',
+                            style: quicksand(),
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    setDialogState(() {
+                      isSubmitting = true;
+                    });
+
+                    try {
+                      final apiService = ApiService();
+                      final agencyId = widget.agency['id'] as String;
+                      await apiService.createAgencyReview(
+                        agencyId: agencyId,
+                        rating: selectedRating,
+                        comment: commentController.text.trim(),
+                      );
+
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Review submitted successfully!',
+                              style: quicksand(),
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        _loadReviews(); // Reload reviews
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              e.toString().replaceAll('Exception: ', ''),
+                              style: quicksand(),
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF9500),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Submit',
+                      style: quicksand(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

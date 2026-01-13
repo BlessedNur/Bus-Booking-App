@@ -72,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _currentIndex == 0 ? Colors.transparent : Colors.grey.shade50,
+      backgroundColor: Colors.grey.shade50,
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) {

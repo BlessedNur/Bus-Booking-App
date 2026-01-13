@@ -521,4 +521,76 @@ class ApiService {
     final data = await _handleResponse(response);
     return AgencyModel.fromJson(data['data']);
   }
+
+  // Review Methods
+  Future<List<Map<String, dynamic>>> getAgencyReviews(String agencyId) async {
+    await getToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.getAgencyReviews(agencyId)}');
+    final response = await _makeRequest(
+      () => http.get(
+        url,
+        headers: _getHeaders(includeAuth: false),
+      ),
+      operation: 'getAgencyReviews',
+    );
+
+    final data = await _handleResponse(response);
+    final List<dynamic> reviewsList = data['data'] ?? [];
+    return reviewsList.map((review) => review as Map<String, dynamic>).toList();
+  }
+
+  Future<bool> canUserReviewAgency(String agencyId) async {
+    await getToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.checkCanReview(agencyId)}');
+    try {
+      final response = await _makeRequest(
+        () => http.get(
+          url,
+          headers: _getHeaders(),
+        ),
+        operation: 'canUserReviewAgency',
+      );
+
+      final data = await _handleResponse(response);
+      return data['data']['canReview'] ?? false;
+    } catch (e) {
+      // If endpoint doesn't exist, check bookings manually
+      return await _checkUserHasBookedWithAgency(agencyId);
+    }
+  }
+
+  Future<bool> _checkUserHasBookedWithAgency(String agencyId) async {
+    try {
+      final bookings = await getMyBookings();
+      return bookings.any((booking) => 
+        booking.bus?.agency?.id == agencyId && 
+        (booking.status == 'Confirmed' || booking.status == 'Completed')
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> createAgencyReview({
+    required String agencyId,
+    required int rating,
+    required String comment,
+  }) async {
+    await getToken();
+    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.createAgencyReview(agencyId)}');
+    final response = await _makeRequest(
+      () => http.post(
+        url,
+        headers: _getHeaders(),
+        body: json.encode({
+          'rating': rating,
+          'comment': comment,
+        }),
+      ),
+      operation: 'createAgencyReview',
+    );
+
+    final data = await _handleResponse(response);
+    return data['data'];
+  }
 }

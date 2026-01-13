@@ -73,4 +73,7 @@ class ApiConfig {
   static const String getAgencies = agencies;
   static String getAgency(String id) => '$agencies/$id';
   static String getAgencyBuses(String id) => '$agencies/$id/buses';
+  static String getAgencyReviews(String id) => '$agencies/$id/reviews';
+  static String createAgencyReview(String id) => '$agencies/$id/reviews';
+  static String checkCanReview(String id) => '$agencies/$id/can-review';
 }
